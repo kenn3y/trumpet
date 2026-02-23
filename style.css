@@ -1,0 +1,92 @@
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background: #111;
+    color: #fff;
+  }
+  
+  .controls {
+    margin: 20px;
+  }
+  
+  button {
+    padding: 10px 20px;
+    margin: 5px;
+    font-size: 16px;
+  }
+  
+  input {
+    padding: 5px;
+    font-size: 16px;
+  }
+  
+  .game {
+    margin-top: 30px;
+    font-size: 20px;
+  }
+
+  .speedBtn {
+    background: #333;
+    color: white;
+    border: 1px solid #555;
+    cursor: pointer;
+  }
+  
+  .speedBtn.active {
+    background: #00c853;
+    color: black;
+    font-weight: bold;
+  }
+
+  .lengthBtn {
+    background: #333;
+    color: white;
+    border: 1px solid #555;
+    cursor: pointer;
+    padding: 8px 15px;
+    margin: 5px;
+  }
+  
+  .lengthBtn.active {
+    background: #2979ff;
+    color: white;
+    font-weight: bold;
+  }
+
+  .control-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 30px;
+    margin-bottom: 30px;
+  }
+  
+  .button-group {
+    display: flex;
+    gap: 15px;
+  }
+  
+  .label-display {
+    font-size: 18px;
+    font-weight: bold;
+  }
+
+  .control-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 40px;
+    margin-bottom: 25px;
+  }
+  
+  .button-group {
+    display: flex;
+    gap: 15px;
+  }
+  
+  .label-display {
+    font-size: 18px;
+    font-weight: bold;
+    min-width: 120px;
+    text-align: left;
+  }

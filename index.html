@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Trumpet Ear Trainer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <h1>Trumpet Ear Trainer</h1>
+
+  <div class="control-row">
+    <div class="button-group">
+      <button class="speedBtn" data-delay="1000">1 sec</button>
+      <button class="speedBtn active" data-delay="2000">2 sec</button>
+      <button class="speedBtn" data-delay="3000">3 sec</button>
+      <button class="speedBtn" data-delay="4000">4 sec</button>
+      <button class="speedBtn" data-delay="5000">5 sec</button>
+    </div>
+  
+    <div class="label-display">
+      Pauze: <span id="currentSpeed">2 sec</span>
+    </div>
+  </div>
+
+  <div class="control-row">
+    <div class="button-group">
+      <button class="lengthBtn" data-length="500">0.5 sec</button>
+      <button class="lengthBtn active" data-length="1000">1.0 sec</button>
+      <button class="lengthBtn" data-length="1500">1.5 sec</button>
+      <button class="lengthBtn" data-length="2000">2.0 sec</button>
+    </div>
+  
+    <div class="label-display">
+      Length: <span id="currentLength">1.0 sec</span>
+    </div>
+  </div>
+  
+  
+  <button id="startBtn">Start</button>
+  <button id="stopBtn">Stop</button>
+
+  <div class="game">
+    <p>Score: <span id="score">0</span></p>
+    <p>Status: <span id="status">Idle</span></p>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
