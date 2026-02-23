@@ -1,5 +1,9 @@
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
+/* ===========================
+   STATE
+=========================== */
+
 let isPlaying = false;
 let lastNote = null;
 let selectedDelay = 2000;
@@ -26,11 +30,7 @@ let currentTargetMidi = null;
 =========================== */
 
 const CHROMATIC = [58,59,60,61,62,63,64,65,66,67,68,69,70];
-
-const BB_MAJOR = [
-  58, 60, 62, 63,
-  65, 67, 69, 70
-];
+const BB_MAJOR  = [58,60,62,63,65,67,69,70];
 
 let currentNoteSet = BB_MAJOR;
 
@@ -43,8 +43,8 @@ function midiToFreq(midi) {
 }
 
 function midiToNoteName(midi) {
-  const noteNames = ["C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"];
-  return noteNames[midi % 12];
+  const names = ["C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"];
+  return names[midi % 12];
 }
 
 function centsOff(measured, target) {
@@ -61,7 +61,7 @@ function getRandomNote() {
 }
 
 /* ===========================
-   AUDIO PLAYBACK
+   AUDIO
 =========================== */
 
 function playTone(freq, durationMs) {
@@ -86,17 +86,15 @@ function playLoop() {
   const midi = getRandomNote();
   currentTargetMidi = midi;
   noteAlreadyScored = false;
+  stableCount = 0;
 
-  // Blind mode → toon vorige evaluatie
   if (!realtimeFeedback && lastCents !== null) {
-    showFinalFeedback(lastCents);
+    showFeedback(lastCents);
   }
 
   playTone(midiToFreq(midi), noteDuration);
 
-  setTimeout(() => {
-    playLoop();
-  }, noteDuration + selectedDelay);
+  setTimeout(playLoop, noteDuration + selectedDelay);
 }
 
 /* ===========================
@@ -134,17 +132,11 @@ function autoCorrelate(buffer, sampleRate) {
   let threshold = 0.2;
 
   for (let i = 0; i < SIZE / 2; i++) {
-    if (Math.abs(buffer[i]) < threshold) {
-      r1 = i;
-      break;
-    }
+    if (Math.abs(buffer[i]) < threshold) { r1 = i; break; }
   }
 
   for (let i = 1; i < SIZE / 2; i++) {
-    if (Math.abs(buffer[SIZE - i]) < threshold) {
-      r2 = SIZE - i;
-      break;
-    }
+    if (Math.abs(buffer[SIZE - i]) < threshold) { r2 = SIZE - i; break; }
   }
 
   buffer = buffer.slice(r1, r2);
@@ -175,6 +167,7 @@ function autoCorrelate(buffer, sampleRate) {
 }
 
 function detectPitch() {
+
   if (!analyser) {
     pitchAnimationId = requestAnimationFrame(detectPitch);
     return;
@@ -186,7 +179,6 @@ function detectPitch() {
   if (freq !== -1 && currentTargetMidi !== null) {
 
     let adjusted = freq;
-
     while (adjusted > 500) adjusted /= 2;
     while (adjusted < 200) adjusted *= 2;
 
@@ -195,23 +187,17 @@ function detectPitch() {
       return;
     }
 
-    const targetFreq = midiToFreq(currentTargetMidi);
-    const cents = centsOff(adjusted, targetFreq);
+    const cents = centsOff(adjusted, midiToFreq(currentTargetMidi));
     lastCents = cents;
 
     if (realtimeFeedback) {
       document.getElementById("centsDisplay").innerText =
         "Deviation: " + cents.toFixed(1) + " cents";
-
-      showRealtimeFeedback(cents);
+      showFeedback(cents);
     }
 
-    // Stabiliteit
-    if (Math.abs(cents) < 40) {
-      stableCount++;
-    } else {
-      stableCount = 0;
-    }
+    if (Math.abs(cents) < 40) stableCount++;
+    else stableCount = 0;
 
     if (stableCount > 3 && !noteAlreadyScored) {
       updateScore(cents);
@@ -226,20 +212,21 @@ function detectPitch() {
    FEEDBACK
 =========================== */
 
-function showRealtimeFeedback(cents) {
+function showFeedback(cents) {
   const feedback = document.getElementById("feedback");
   const arrow = document.getElementById("arrow");
   const noteName = midiToNoteName(currentTargetMidi);
+
   const abs = Math.abs(cents);
 
   if (abs < 10) {
-    feedback.innerHTML = "Perfect 🎯<br><span class='answerNote'>" + noteName + "</span>";
+    feedback.innerHTML = `Perfect 🎯<br><span class='answerNote'>${noteName}</span>`;
     feedback.className = "feedback good";
     arrow.innerText = "✔";
     arrow.className = "arrow center";
   }
   else if (abs < 25) {
-    feedback.innerHTML = "Close 👍<br><span class='answerNote'>" + noteName + "</span>";
+    feedback.innerHTML = `Close 👍<br><span class='answerNote'>${noteName}</span>`;
     feedback.className = "feedback ok";
     arrow.innerText = "•";
     arrow.className = "arrow center";
@@ -247,32 +234,19 @@ function showRealtimeFeedback(cents) {
   else {
     const high = cents > 0;
     feedback.innerHTML =
-      (high ? "Too High" : "Too Low") +
-      "<br><span class='answerNote'>" + noteName + "</span>";
+      `${high ? "Too High" : "Too Low"}<br><span class='answerNote'>${noteName}</span>`;
     feedback.className = "feedback bad";
     arrow.innerText = high ? "⬆" : "⬇";
     arrow.className = high ? "arrow up" : "arrow down";
   }
 }
 
-function showFinalFeedback(cents) {
-  showRealtimeFeedback(cents);
-}
-
 function updateScore(cents) {
   const abs = Math.abs(cents);
 
-  if (abs < 10) {
-    score += 2;
-    streak++;
-  }
-  else if (abs < 25) {
-    score += 1;
-    streak++;
-  }
-  else {
-    streak = 0;
-  }
+  if (abs < 10) { score += 2; streak++; }
+  else if (abs < 25) { score += 1; streak++; }
+  else { streak = 0; }
 
   document.getElementById("score").innerText = score;
   document.getElementById("streak").innerText = streak;
@@ -293,10 +267,8 @@ function stopGame() {
   isPlaying = false;
   document.getElementById("status").innerText = "Stopped";
 
-  if (pitchAnimationId) {
-    cancelAnimationFrame(pitchAnimationId);
-    pitchAnimationId = null;
-  }
+  if (pitchAnimationId) cancelAnimationFrame(pitchAnimationId);
+  pitchAnimationId = null;
 
   if (micStream) {
     micStream.getTracks().forEach(track => track.stop());
@@ -308,63 +280,51 @@ function stopGame() {
 }
 
 /* ===========================
-   EVENT LISTENERS
+   DOM READY
 =========================== */
 
-document.getElementById("startBtn").addEventListener("click", async () => {
-  await audioCtx.resume();
-  if (!micStream) await initMicrophone();
-  startGame();
-  detectPitch();
-});
+document.addEventListener("DOMContentLoaded", () => {
 
-document.getElementById("stopBtn").addEventListener("click", stopGame);
-
-document.getElementById("realtimeToggle")
-  .addEventListener("change", function() {
-    realtimeFeedback = this.checked;
-});
-
-/* ===========================
-   SPEED BUTTONS
-=========================== */
-
-document.querySelectorAll(".speedBtn").forEach(btn => {
-  btn.addEventListener("click", () => {
-
-    selectedDelay = parseInt(btn.dataset.delay);
-
-    document.querySelectorAll(".speedBtn")
-      .forEach(b => b.classList.remove("active"));
-
-    btn.classList.add("active");
-
-    document.getElementById("currentSpeed").innerText =
-      (selectedDelay / 1000) + " sec";
+  document.getElementById("startBtn").addEventListener("click", async () => {
+    await audioCtx.resume();
+    if (!micStream) await initMicrophone();
+    startGame();
+    detectPitch();
   });
-});
 
-/* ===========================
-   NOTE LENGTH BUTTONS
-=========================== */
+  document.getElementById("stopBtn").addEventListener("click", stopGame);
 
-document.querySelectorAll(".lengthBtn").forEach(btn => {
-  btn.addEventListener("click", () => {
+  document.getElementById("realtimeToggle")
+    .addEventListener("change", function() {
+      realtimeFeedback = this.checked;
+    });
 
-    noteDuration = parseInt(btn.dataset.length);
-
-    document.querySelectorAll(".lengthBtn")
-      .forEach(b => b.classList.remove("active"));
-
-    btn.classList.add("active");
-
-    document.getElementById("currentLength").innerText =
-      (noteDuration / 1000).toFixed(1) + " sec";
+  document.querySelectorAll(".speedBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      selectedDelay = parseInt(btn.dataset.delay);
+      document.querySelectorAll(".speedBtn")
+        .forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("currentSpeed").innerText =
+        (selectedDelay / 1000) + " sec";
+    });
   });
-});
 
-document.querySelectorAll('input[name="mode"]').forEach(radio => {
-  radio.addEventListener("change", function() {
-    currentNoteSet = this.value === "scale" ? BB_MAJOR : CHROMATIC;
+  document.querySelectorAll(".lengthBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      noteDuration = parseInt(btn.dataset.length);
+      document.querySelectorAll(".lengthBtn")
+        .forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("currentLength").innerText =
+        (noteDuration / 1000).toFixed(1) + " sec";
+    });
   });
+
+  document.querySelectorAll('input[name="mode"]').forEach(radio => {
+    radio.addEventListener("change", function() {
+      currentNoteSet = this.value === "scale" ? BB_MAJOR : CHROMATIC;
+    });
+  });
+
 });
