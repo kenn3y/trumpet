@@ -325,6 +325,44 @@ document.getElementById("realtimeToggle")
     realtimeFeedback = this.checked;
 });
 
+/* ===========================
+   SPEED BUTTONS
+=========================== */
+
+document.querySelectorAll(".speedBtn").forEach(btn => {
+  btn.addEventListener("click", () => {
+
+    selectedDelay = parseInt(btn.dataset.delay);
+
+    document.querySelectorAll(".speedBtn")
+      .forEach(b => b.classList.remove("active"));
+
+    btn.classList.add("active");
+
+    document.getElementById("currentSpeed").innerText =
+      (selectedDelay / 1000) + " sec";
+  });
+});
+
+/* ===========================
+   NOTE LENGTH BUTTONS
+=========================== */
+
+document.querySelectorAll(".lengthBtn").forEach(btn => {
+  btn.addEventListener("click", () => {
+
+    noteDuration = parseInt(btn.dataset.length);
+
+    document.querySelectorAll(".lengthBtn")
+      .forEach(b => b.classList.remove("active"));
+
+    btn.classList.add("active");
+
+    document.getElementById("currentLength").innerText =
+      (noteDuration / 1000).toFixed(1) + " sec";
+  });
+});
+
 document.querySelectorAll('input[name="mode"]').forEach(radio => {
   radio.addEventListener("change", function() {
     currentNoteSet = this.value === "scale" ? BB_MAJOR : CHROMATIC;
