@@ -113,3 +113,20 @@ body {
     font-size: 18px;
     margin-bottom: 20px;
   }
+
+  .arrow {
+    font-size: 60px;
+    margin: 10px 0;
+  }
+  
+  .arrow.up {
+    color: #ff5252;
+  }
+  
+  .arrow.down {
+    color: #ff5252;
+  }
+  
+  .arrow.center {
+    color: #00e676;
+  }

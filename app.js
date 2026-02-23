@@ -10,6 +10,8 @@ let score = 0;
 let noteAlreadyScored = false;
 let stableCount = 0;
 let lastCents = null;
+let streak = 0;
+let realtimeFeedback = true;
 
 // Bb3 (58) tot Bb4 (70)
 const MIN_MIDI = 58;
@@ -52,6 +54,41 @@ function playLoop() {
     noteAlreadyScored = false; // reset scoring voor nieuwe noot
   
     const freq = midiToFreq(midi);
+    if (!realtimeFeedback && lastCents !== null) {
+
+        const feedback = document.getElementById("feedback");
+        const arrow = document.getElementById("arrow");
+
+        document.getElementById("centsDisplay").innerText =
+  "Deviation: " + lastCents.toFixed(1) + " cents";
+      
+        if (Math.abs(lastCents) < 10) {
+          feedback.innerText = "Perfect 🎯";
+          feedback.className = "feedback good";
+          arrow.innerText = "✔";
+          arrow.className = "arrow center";
+      
+        } else if (Math.abs(lastCents) < 25) {
+          feedback.innerText = "Close 👍";
+          feedback.className = "feedback ok";
+          arrow.innerText = "•";
+          arrow.className = "arrow center";
+      
+        } else {
+          if (lastCents > 0) {
+            feedback.innerText = "Too High";
+            feedback.className = "feedback bad";
+            arrow.innerText = "⬆";
+            arrow.className = "arrow up";
+          } else {
+            feedback.innerText = "Too Low";
+            feedback.className = "feedback bad";
+            arrow.innerText = "⬇";
+            arrow.className = "arrow down";
+          }
+        }
+      
+      }
     playTone(freq, noteDuration);
   
     setTimeout(() => {
@@ -83,7 +120,7 @@ function stopGame() {
       micStream = null;
     }
   
-    console.log("Microphone stopped");
+    // console.log("Microphone stopped");
   }
 
 
@@ -138,7 +175,7 @@ async function initMicrophone() {
   
     microphone.connect(analyser);
   
-    console.log("Microphone initialized");
+    // console.log("Microphone initialized");
   }
 
 function autoCorrelate(buffer, sampleRate) {
@@ -200,7 +237,7 @@ function autoCorrelate(buffer, sampleRate) {
   }
 
   function detectPitch() {
-    console.log("detect loop running");
+    // console.log("detect loop running");
   
     if (!analyser) {
       pitchAnimationId = requestAnimationFrame(detectPitch);
@@ -210,41 +247,7 @@ function autoCorrelate(buffer, sampleRate) {
     analyser.getFloatTimeDomainData(dataArray);
     const freq = autoCorrelate(dataArray, audioCtx.sampleRate);
   
-    // if (freq !== -1 && currentTargetMidi !== null) {
 
-    //     const targetFreq = midiToFreq(currentTargetMidi);
-    //     const cents = centsOff(freq, targetFreq);
-      
-    //     document.getElementById("centsDisplay").innerText =
-    //       "Deviation: " + cents.toFixed(1) + " cents";
-      
-    //     const feedback = document.getElementById("feedback");
-      
-    //     if (Math.abs(cents) < 10) {
-    //       feedback.innerText = "Perfect 🎯";
-    //       feedback.className = "feedback good";
-      
-    //       if (!noteAlreadyScored) {
-    //         score += 2;
-    //         document.getElementById("score").innerText = score;
-    //         noteAlreadyScored = true;
-    //       }
-      
-    //     } else if (Math.abs(cents) < 25) {
-    //       feedback.innerText = "Close 👍";
-    //       feedback.className = "feedback ok";
-      
-    //       if (!noteAlreadyScored) {
-    //         score += 1;
-    //         document.getElementById("score").innerText = score;
-    //         noteAlreadyScored = true;
-    //       }
-      
-    //     } else {
-    //       feedback.innerText = cents > 0 ? "Too High ⬆" : "Too Low ⬇";
-    //       feedback.className = "feedback bad";
-    //     }
-    //   }
     if (freq !== -1 && currentTargetMidi !== null) {
 
         // === 1️⃣ Octaaf normalisatie ===
@@ -262,10 +265,13 @@ function autoCorrelate(buffer, sampleRate) {
         const targetFreq = midiToFreq(currentTargetMidi);
         const cents = centsOff(adjustedFreq, targetFreq);
       
-        document.getElementById("centsDisplay").innerText =
-          "Deviation: " + cents.toFixed(1) + " cents";
+        if (realtimeFeedback) {
+            document.getElementById("centsDisplay").innerText =
+              "Deviation: " + cents.toFixed(1) + " cents";
+          }
       
         const feedback = document.getElementById("feedback");
+        const arrow = document.getElementById("arrow");
       
         // === 3️⃣ Stabiliteitscontrole ===
         if (Math.abs(cents) < 40) {
@@ -279,35 +285,56 @@ function autoCorrelate(buffer, sampleRate) {
         }
       
         lastCents = cents;
-      
-        // Pas feedback alleen toe als stabiel
-        if (stableCount > 3) {   // ~150ms stabiel
-      
-          if (Math.abs(cents) < 10) {
-            feedback.innerText = "Perfect 🎯";
-            feedback.className = "feedback good";
-      
-            if (!noteAlreadyScored) {
-              score += 2;
-              document.getElementById("score").innerText = score;
-              noteAlreadyScored = true;
+
+        if (realtimeFeedback) {
+
+            if (Math.abs(cents) < 10) {
+              feedback.innerText = "Perfect 🎯";
+              feedback.className = "feedback good";
+              arrow.innerText = "✔";
+              arrow.className = "arrow center";
+          
+            } else if (Math.abs(cents) < 25) {
+              feedback.innerText = "Close 👍";
+              feedback.className = "feedback ok";
+              arrow.innerText = "•";
+              arrow.className = "arrow center";
+          
+            } else {
+              if (cents > 0) {
+                feedback.innerText = "Too High";
+                feedback.className = "feedback bad";
+                arrow.innerText = "⬆";
+                arrow.className = "arrow up";
+              } else {
+                feedback.innerText = "Too Low";
+                feedback.className = "feedback bad";
+                arrow.innerText = "⬇";
+                arrow.className = "arrow down";
+              }
             }
-      
-          } else if (Math.abs(cents) < 25) {
-            feedback.innerText = "Close 👍";
-            feedback.className = "feedback ok";
-      
-            if (!noteAlreadyScored) {
-              score += 1;
-              document.getElementById("score").innerText = score;
-              noteAlreadyScored = true;
-            }
-      
-          } else {
-            feedback.innerText = cents > 0 ? "Too High ⬆" : "Too Low ⬇";
-            feedback.className = "feedback bad";
+          
           }
-        }
+        
+          if (stableCount > 3 && !noteAlreadyScored) {
+
+            if (Math.abs(cents) < 10) {
+              score += 2;
+              streak += 1;
+          
+            } else if (Math.abs(cents) < 25) {
+              score += 1;
+              streak += 1;
+          
+            } else {
+              streak = 0;
+            }
+          
+            document.getElementById("score").innerText = score;
+            document.getElementById("streak").innerText = streak;
+          
+            noteAlreadyScored = true;
+          }
       }
 
     pitchAnimationId = requestAnimationFrame(detectPitch);
@@ -323,6 +350,11 @@ function autoCorrelate(buffer, sampleRate) {
     startGame();        // eerst game starten (isPlaying = true)
     detectPitch();      // daarna pitch detectie starten
   });
+
+  document.getElementById("realtimeToggle")
+  .addEventListener("change", function() {
+    realtimeFeedback = this.checked;
+});
 
   function freqToMidi(freq) {
     return 69 + 12 * Math.log2(freq / 440);

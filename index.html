@@ -36,6 +36,10 @@
     </div>
   </div>
   
+  <label style="display:block; margin-top:15px;">
+    <input type="checkbox" id="realtimeToggle" checked>
+    Real-time feedback
+  </label>
   
   <button id="startBtn">Start</button>
   <button id="stopBtn">Stop</button>
@@ -44,12 +48,14 @@
     🎺 Speel de noot
   </div>
   
+  <div id="arrow" class="arrow"></div>
   <div id="centsDisplay" class="cents">
     ---
   </div>
-  
+
   <div class="game">
     <p>Score: <span id="score">0</span></p>
+    <p>🔥 Streak: <span id="streak">0</span></p>
     <p>Status: <span id="status">Idle</span></p>
   </div>
 
