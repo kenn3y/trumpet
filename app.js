@@ -80,19 +80,32 @@ function playTone(freq, durationMs) {
   osc.stop(audioCtx.currentTime + durationMs / 1000);
 }
 
+function resetDisplay() {
+  document.getElementById("feedback").innerText = "🎺 Speel de noot";
+  document.getElementById("feedback").className = "feedback";
+  document.getElementById("arrow").innerText = "";
+  document.getElementById("centsDisplay").innerText = "---";
+}
+
 function playLoop() {
   if (!isPlaying) return;
+
+  resetDisplay();
 
   const midi = getRandomNote();
   currentTargetMidi = midi;
   noteAlreadyScored = false;
   stableCount = 0;
-
-  if (!realtimeFeedback && lastCents !== null) {
-    showFeedback(lastCents);
-  }
+  lastCents = null;
 
   playTone(midiToFreq(midi), noteDuration);
+
+  // Feedback moment voor BLIND mode
+  setTimeout(() => {
+    if (!realtimeFeedback && lastCents !== null) {
+      showFinalFeedback(lastCents);
+    }
+  }, noteDuration + selectedDelay - 50);
 
   setTimeout(playLoop, noteDuration + selectedDelay);
 }
@@ -193,7 +206,7 @@ function detectPitch() {
     if (realtimeFeedback) {
       document.getElementById("centsDisplay").innerText =
         "Deviation: " + cents.toFixed(1) + " cents";
-      showFeedback(cents);
+      showRealtimeFeedback(cents);
     }
 
     if (Math.abs(cents) < 40) stableCount++;
@@ -212,33 +225,56 @@ function detectPitch() {
    FEEDBACK
 =========================== */
 
-function showFeedback(cents) {
+function showRealtimeFeedback(cents) {
+  showFeedback(cents, false);
+}
+
+function showFinalFeedback(cents) {
+  showFeedback(cents, true);
+}
+
+function showFeedback(cents, showNote) {
+
   const feedback = document.getElementById("feedback");
   const arrow = document.getElementById("arrow");
   const noteName = midiToNoteName(currentTargetMidi);
 
   const abs = Math.abs(cents);
 
+  let text = "";
+  let className = "";
+  let arrowSymbol = "";
+  let arrowClass = "";
+
   if (abs < 10) {
-    feedback.innerHTML = `Perfect 🎯<br><span class='answerNote'>${noteName}</span>`;
-    feedback.className = "feedback good";
-    arrow.innerText = "✔";
-    arrow.className = "arrow center";
+    text = "Perfect 🎯";
+    className = "feedback good";
+    arrowSymbol = "✔";
+    arrowClass = "arrow center";
   }
   else if (abs < 25) {
-    feedback.innerHTML = `Close 👍<br><span class='answerNote'>${noteName}</span>`;
-    feedback.className = "feedback ok";
-    arrow.innerText = "•";
-    arrow.className = "arrow center";
+    text = "Close 👍";
+    className = "feedback ok";
+    arrowSymbol = "•";
+    arrowClass = "arrow center";
   }
   else {
     const high = cents > 0;
-    feedback.innerHTML =
-      `${high ? "Too High" : "Too Low"}<br><span class='answerNote'>${noteName}</span>`;
-    feedback.className = "feedback bad";
-    arrow.innerText = high ? "⬆" : "⬇";
-    arrow.className = high ? "arrow up" : "arrow down";
+    text = high ? "Too High" : "Too Low";
+    className = "feedback bad";
+    arrowSymbol = high ? "⬆" : "⬇";
+    arrowClass = high ? "arrow up" : "arrow down";
   }
+
+  if (showNote) {
+    feedback.innerHTML = `${text}<br><span class="answerNote">${noteName}</span>`;
+  } else {
+    feedback.innerText = text;
+  }
+
+  feedback.className = className;
+  arrow.innerText = arrowSymbol;
+  arrow.className = arrowClass;
 }
 
 function updateScore(cents) {
