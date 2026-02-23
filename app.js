@@ -4,6 +4,12 @@ let isPlaying = false;
 let lastNote = null;
 let selectedDelay = 2000; // default 2 sec
 let noteDuration = 1000; // 1.0 sec
+let pitchAnimationId = null;
+let micStream = null;
+let score = 0;
+let noteAlreadyScored = false;
+let stableCount = 0;
+let lastCents = null;
 
 // Bb3 (58) tot Bb4 (70)
 const MIN_MIDI = 58;
@@ -39,17 +45,19 @@ function playTone(freq, durationMs) {
 }
 
 function playLoop() {
-  if (!isPlaying) return;
-
-  const midi = getRandomNote();
-  const freq = midiToFreq(midi);
-
-  playTone(freq, noteDuration);
-
-  setTimeout(() => {
-    playLoop();
-  }, noteDuration + selectedDelay);
-}
+    if (!isPlaying) return;
+  
+    const midi = getRandomNote();
+    currentTargetMidi = midi;
+    noteAlreadyScored = false; // reset scoring voor nieuwe noot
+  
+    const freq = midiToFreq(midi);
+    playTone(freq, noteDuration);
+  
+    setTimeout(() => {
+      playLoop();
+    }, noteDuration + selectedDelay);
+  }
 
 function startGame() {
   if (isPlaying) return;
@@ -59,9 +67,24 @@ function startGame() {
 }
 
 function stopGame() {
-  isPlaying = false;
-  document.getElementById("status").innerText = "Stopped";
-}
+    isPlaying = false;
+  
+    document.getElementById("status").innerText = "Stopped";
+  
+    // Stop pitch detection loop
+    if (pitchAnimationId) {
+      cancelAnimationFrame(pitchAnimationId);
+      pitchAnimationId = null;
+    }
+  
+    // Stop microphone stream
+    if (micStream) {
+      micStream.getTracks().forEach(track => track.stop());
+      micStream = null;
+    }
+  
+    console.log("Microphone stopped");
+  }
 
 
 document.querySelectorAll(".speedBtn").forEach(btn => {
@@ -94,9 +117,219 @@ document.querySelectorAll(".speedBtn").forEach(btn => {
     });
   });
 
-document.getElementById("startBtn").addEventListener("click", () => {
-  audioCtx.resume();
-  startGame();
-});
 
 document.getElementById("stopBtn").addEventListener("click", stopGame);
+
+let analyser;
+let microphone;
+let dataArray;
+let bufferLength;
+
+async function initMicrophone() {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  
+    microphone = audioCtx.createMediaStreamSource(micStream);
+  
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+  
+    bufferLength = analyser.fftSize;
+    dataArray = new Float32Array(bufferLength);
+  
+    microphone.connect(analyser);
+  
+    console.log("Microphone initialized");
+  }
+
+function autoCorrelate(buffer, sampleRate) {
+    let SIZE = buffer.length;
+    let rms = 0;
+  
+    for (let i = 0; i < SIZE; i++) {
+      let val = buffer[i];
+      rms += val * val;
+    }
+    rms = Math.sqrt(rms / SIZE);
+  
+    if (rms < 0.01) return -1; // too quiet
+  
+    let r1 = 0, r2 = SIZE - 1;
+    let threshold = 0.2;
+  
+    for (let i = 0; i < SIZE / 2; i++) {
+      if (Math.abs(buffer[i]) < threshold) {
+        r1 = i;
+        break;
+      }
+    }
+  
+    for (let i = 1; i < SIZE / 2; i++) {
+      if (Math.abs(buffer[SIZE - i]) < threshold) {
+        r2 = SIZE - i;
+        break;
+      }
+    }
+  
+    buffer = buffer.slice(r1, r2);
+    SIZE = buffer.length;
+  
+    let c = new Array(SIZE).fill(0);
+  
+    for (let i = 0; i < SIZE; i++) {
+      for (let j = 0; j < SIZE - i; j++) {
+        c[i] = c[i] + buffer[j] * buffer[j + i];
+      }
+    }
+  
+    let d = 0;
+    while (c[d] > c[d + 1]) d++;
+  
+    let maxval = -1;
+    let maxpos = -1;
+  
+    for (let i = d; i < SIZE; i++) {
+      if (c[i] > maxval) {
+        maxval = c[i];
+        maxpos = i;
+      }
+    }
+  
+    let T0 = maxpos;
+  
+    return sampleRate / T0;
+  }
+
+  function detectPitch() {
+    console.log("detect loop running");
+  
+    if (!analyser) {
+      pitchAnimationId = requestAnimationFrame(detectPitch);
+      return;
+    }
+  
+    analyser.getFloatTimeDomainData(dataArray);
+    const freq = autoCorrelate(dataArray, audioCtx.sampleRate);
+  
+    // if (freq !== -1 && currentTargetMidi !== null) {
+
+    //     const targetFreq = midiToFreq(currentTargetMidi);
+    //     const cents = centsOff(freq, targetFreq);
+      
+    //     document.getElementById("centsDisplay").innerText =
+    //       "Deviation: " + cents.toFixed(1) + " cents";
+      
+    //     const feedback = document.getElementById("feedback");
+      
+    //     if (Math.abs(cents) < 10) {
+    //       feedback.innerText = "Perfect 🎯";
+    //       feedback.className = "feedback good";
+      
+    //       if (!noteAlreadyScored) {
+    //         score += 2;
+    //         document.getElementById("score").innerText = score;
+    //         noteAlreadyScored = true;
+    //       }
+      
+    //     } else if (Math.abs(cents) < 25) {
+    //       feedback.innerText = "Close 👍";
+    //       feedback.className = "feedback ok";
+      
+    //       if (!noteAlreadyScored) {
+    //         score += 1;
+    //         document.getElementById("score").innerText = score;
+    //         noteAlreadyScored = true;
+    //       }
+      
+    //     } else {
+    //       feedback.innerText = cents > 0 ? "Too High ⬆" : "Too Low ⬇";
+    //       feedback.className = "feedback bad";
+    //     }
+    //   }
+    if (freq !== -1 && currentTargetMidi !== null) {
+
+        // === 1️⃣ Octaaf normalisatie ===
+        let adjustedFreq = freq;
+      
+        while (adjustedFreq > 500) adjustedFreq /= 2;
+        while (adjustedFreq < 200) adjustedFreq *= 2;
+      
+        // === 2️⃣ Trompet bereik filter ===
+        if (adjustedFreq < 220 || adjustedFreq > 480) {
+          pitchAnimationId = requestAnimationFrame(detectPitch);
+          return;
+        }
+      
+        const targetFreq = midiToFreq(currentTargetMidi);
+        const cents = centsOff(adjustedFreq, targetFreq);
+      
+        document.getElementById("centsDisplay").innerText =
+          "Deviation: " + cents.toFixed(1) + " cents";
+      
+        const feedback = document.getElementById("feedback");
+      
+        // === 3️⃣ Stabiliteitscontrole ===
+        if (Math.abs(cents) < 40) {
+          if (lastCents !== null && Math.abs(cents - lastCents) < 5) {
+            stableCount++;
+          } else {
+            stableCount = 0;
+          }
+        } else {
+          stableCount = 0;
+        }
+      
+        lastCents = cents;
+      
+        // Pas feedback alleen toe als stabiel
+        if (stableCount > 3) {   // ~150ms stabiel
+      
+          if (Math.abs(cents) < 10) {
+            feedback.innerText = "Perfect 🎯";
+            feedback.className = "feedback good";
+      
+            if (!noteAlreadyScored) {
+              score += 2;
+              document.getElementById("score").innerText = score;
+              noteAlreadyScored = true;
+            }
+      
+          } else if (Math.abs(cents) < 25) {
+            feedback.innerText = "Close 👍";
+            feedback.className = "feedback ok";
+      
+            if (!noteAlreadyScored) {
+              score += 1;
+              document.getElementById("score").innerText = score;
+              noteAlreadyScored = true;
+            }
+      
+          } else {
+            feedback.innerText = cents > 0 ? "Too High ⬆" : "Too Low ⬇";
+            feedback.className = "feedback bad";
+          }
+        }
+      }
+
+    pitchAnimationId = requestAnimationFrame(detectPitch);
+  }
+
+  document.getElementById("startBtn").addEventListener("click", async () => {
+    await audioCtx.resume();
+  
+    if (!analyser) {
+      await initMicrophone();
+    }
+  
+    startGame();        // eerst game starten (isPlaying = true)
+    detectPitch();      // daarna pitch detectie starten
+  });
+
+  function freqToMidi(freq) {
+    return 69 + 12 * Math.log2(freq / 440);
+  }
+
+  function centsOff(measuredFreq, targetFreq) {
+    return 1200 * Math.log2(measuredFreq / targetFreq);
+  }
+
+  let currentTargetMidi = null;

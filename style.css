@@ -90,3 +90,26 @@ body {
     min-width: 120px;
     text-align: left;
   }
+
+  .feedback {
+    font-size: 28px;
+    font-weight: bold;
+    margin: 20px 0;
+  }
+  
+  .feedback.good {
+    color: #00e676;
+  }
+  
+  .feedback.ok {
+    color: #ffea00;
+  }
+  
+  .feedback.bad {
+    color: #ff5252;
+  }
+  
+  .cents {
+    font-size: 18px;
+    margin-bottom: 20px;
+  }
