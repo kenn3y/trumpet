@@ -119,6 +119,8 @@ function stopGame() {
       micStream.getTracks().forEach(track => track.stop());
       micStream = null;
     }
+    microphone = null;
+    analyser = null;
   
     // console.log("Microphone stopped");
   }
@@ -163,9 +165,13 @@ let dataArray;
 let bufferLength;
 
 async function initMicrophone() {
+
     micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
   
-    microphone = audioCtx.createMediaStreamSource(micStream);
+    // Oude analyser verwijderen (veiligheid)
+    if (microphone) {
+      try { microphone.disconnect(); } catch {}
+    }
   
     analyser = audioCtx.createAnalyser();
     analyser.fftSize = 2048;
@@ -173,9 +179,9 @@ async function initMicrophone() {
     bufferLength = analyser.fftSize;
     dataArray = new Float32Array(bufferLength);
   
+    microphone = audioCtx.createMediaStreamSource(micStream);
     microphone.connect(analyser);
   
-    // console.log("Microphone initialized");
   }
 
 function autoCorrelate(buffer, sampleRate) {
@@ -341,14 +347,15 @@ function autoCorrelate(buffer, sampleRate) {
   }
 
   document.getElementById("startBtn").addEventListener("click", async () => {
+
     await audioCtx.resume();
   
-    if (!analyser) {
+    if (!micStream) {
       await initMicrophone();
     }
   
-    startGame();        // eerst game starten (isPlaying = true)
-    detectPitch();      // daarna pitch detectie starten
+    startGame();
+    detectPitch();
   });
 
   document.getElementById("realtimeToggle")
