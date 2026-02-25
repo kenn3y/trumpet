@@ -16,6 +16,7 @@ let microphone = null;
 let dataArray = null;
 
 let score = 0;
+let totalNotes = 0;
 let streak = 0;
 let noteAlreadyScored = false;
 
@@ -107,6 +108,8 @@ function playLoop() {
 
   const midi = getRandomNote();
   currentTargetMidi = midi;
+  totalNotes++;
+  updateStats();
 
   noteAlreadyScored = false;
   stableCount = 0;
@@ -304,15 +307,31 @@ function showFeedback(cents, showNote) {
   arrow.className = arrowClass;
 }
 
+function updateStats() {
+
+  const percentage =
+    totalNotes > 0
+      ? Math.round((score / totalNotes) * 100)
+      : 0;
+
+  document.getElementById("statsLine").innerText =
+    `Score: ${score} | Total: ${totalNotes} | Accuracy: ${percentage}%`;
+
+  document.getElementById("streak").innerText = streak;
+}
+
 function updateScore(cents) {
+
   const abs = Math.abs(cents);
 
-  if (abs < 10) { score += 2; streak++; }
-  else if (abs < 25) { score += 1; streak++; }
-  else { streak = 0; }
+  if (abs < 25) {       // alles binnen close is goed
+    score++;
+    streak++;
+  } else {
+    streak = 0;
+  }
 
-  document.getElementById("score").innerText = score;
-  document.getElementById("streak").innerText = streak;
+  updateStats();
 }
 
 /* ===========================
