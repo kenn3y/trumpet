@@ -24,6 +24,7 @@ let lastCents = null;
 
 let realtimeFeedback = true;
 let currentTargetMidi = null;
+let finalCents = null;
 
 /* ===========================
    NOTE SETS
@@ -111,6 +112,7 @@ function playLoop() {
   noteAlreadyScored = false;
   stableCount = 0;
   lastCents = null;
+  finalCents = null;
 
   playTone(midiToFreq(midi), noteDuration);
 
@@ -118,11 +120,12 @@ function playLoop() {
   setTimeout(() => {
     if (!realtimeFeedback) {
 
-      if (lastCents !== null) {
-        showFinalFeedback(lastCents);
+      if (finalCents !== null) {
+        showFinalFeedback(finalCents);
       } else {
         showMissedNote();
       }
+    
     }
   }, noteDuration + selectedDelay - 50);
 
@@ -221,6 +224,7 @@ function detectPitch() {
 
     const cents = centsOff(adjusted, midiToFreq(currentTargetMidi));
     lastCents = cents;
+    finalCents = cents;
 
     if (realtimeFeedback) {
       document.getElementById("centsDisplay").innerText =
