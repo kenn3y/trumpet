@@ -87,6 +87,20 @@ function resetDisplay() {
   document.getElementById("centsDisplay").innerText = "---";
 }
 
+function showMissedNote() {
+
+  const feedback = document.getElementById("feedback");
+  const arrow = document.getElementById("arrow");
+  const noteName = midiToNoteName(currentTargetMidi);
+
+  feedback.innerHTML =
+    `No stable tone detected<br><span class="answerNote">${noteName}</span>`;
+
+  feedback.className = "feedback bad";
+  arrow.innerText = "✖";
+  arrow.className = "arrow center";
+}
+
 function playLoop() {
   if (!isPlaying) return;
 
@@ -102,8 +116,13 @@ function playLoop() {
 
   // Feedback moment voor BLIND mode
   setTimeout(() => {
-    if (!realtimeFeedback && lastCents !== null) {
-      showFinalFeedback(lastCents);
+    if (!realtimeFeedback) {
+
+      if (lastCents !== null) {
+        showFinalFeedback(lastCents);
+      } else {
+        showMissedNote();
+      }
     }
   }, noteDuration + selectedDelay - 50);
 
