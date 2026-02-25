@@ -105,8 +105,6 @@ function showMissedNote() {
 function playLoop() {
   if (!isPlaying) return;
 
-  resetDisplay();
-
   const midi = getRandomNote();
   currentTargetMidi = midi;
   noteAlreadyScored = false;
@@ -114,6 +112,7 @@ function playLoop() {
   lastCents = null;
   finalCents = null;
 
+  resetDisplay();
   playTone(midiToFreq(midi), noteDuration);
 
   // Feedback moment voor BLIND mode
