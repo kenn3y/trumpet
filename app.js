@@ -107,28 +107,33 @@ function playLoop() {
 
   const midi = getRandomNote();
   currentTargetMidi = midi;
+
   noteAlreadyScored = false;
   stableCount = 0;
   lastCents = null;
   finalCents = null;
 
+  // Reset display alleen bij START nieuwe noot
   resetDisplay();
+
   playTone(midiToFreq(midi), noteDuration);
 
-  // Feedback moment voor BLIND mode
+  // Feedback moment aan einde pauze
   setTimeout(() => {
     if (!realtimeFeedback) {
-
       if (finalCents !== null) {
         showFinalFeedback(finalCents);
       } else {
         showMissedNote();
       }
-    
     }
-  }, noteDuration + selectedDelay - 50);
+  }, noteDuration + selectedDelay);
 
-  setTimeout(playLoop, noteDuration + selectedDelay);
+  // Wacht EXTRA tijd zodat feedback zichtbaar blijft
+  setTimeout(() => {
+    playLoop();
+  }, noteDuration + selectedDelay + 800); 
+  // 👈 800ms extra zichtbare feedback tijd
 }
 
 /* ===========================
