@@ -23,7 +23,7 @@ let noteAlreadyScored = false;
 let stableCount = 0;
 let lastCents = null;
 
-let realtimeFeedback = false;
+let realtimeFeedback = true;
 let currentTargetMidi = null;
 let finalCents = null;
 
